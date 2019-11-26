@@ -201,21 +201,31 @@ def distortion():
 
         def g2(x): return anti_slope * (x - sx1) + sy1
 
-    def parabola(x, dee): return (-(Radius + math.sqrt(math.pow(ixs - ixt, 2) + math.pow(iys - iyt, 2))) / Radius) \
-                               * math.pow(x, 2) + dee
+    def parabola(x, dee): return (dee * math.sqrt(math.pow(ixs - sx, 2) + math.pow(iys - sy, 2))) / Radius *\
+                                 (((-math.pow(x, 2)) / math.pow(Radius, 2)) + 1)
     for j in range(img.shape[0]):
         for i in range(img.shape[1]):
             if f2(i) <= j <= f1(i) and ((g1(i) <= j <= g2(i) and (direction == 1 or direction == 3)) or
                                       (g1(i) >= j >= g2(i) and (direction == 2 or direction == 4))):
                 if (g3(i) >= j and (direction == 1 or direction == 4)) or \
                         (g3(i) <= j and (direction == 3 or direction == 2)):
-                    d = math.sqrt(math.pow(ixs - j, 2) + math.pow(iys - i, 2))
-                    new_angle = math.atan((i - iys) / (j - ixs))
+                    d = math.sqrt(math.pow(sx - i, 2) + math.pow(sy - j, 2))
+                    try:
+                        new_angle = math.atan(((j - sy) / (i - sx)))
+                    except ZeroDivisionError:
+                        new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
                     d_tag = d * math.cos(new_angle)
-                    jump_distance = parabola(math.sqrt(math.pow(j - ixs - d_tag * math.cos(angle), 2) +
-                                                       math.pow(i - iys - d_tag * math.sin(angle), 2)), d_tag)
-                    img[int(j + jump_distance * math.cos(angle)), int(i + jump_distance * math.sin(angle))] = img[j, i]
+                    jump_distance = parabola(math.sqrt(math.pow(i - ixs - d_tag * math.cos(angle), 2) +
+                                                       math.pow(j - iys - d_tag * math.sin(angle), 2)), d_tag)
+                    if direction == 1:
+                        img[int(j + jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = img_og[j, i]
+                    if direction == 2:
+                        img[int(j - jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = img_og[j, i]
+                    if direction == 3:
+                        img[int(j - jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = img_og[j, i]
+                    if direction == 4:
+                        img[int(j + jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = img_og[j, i]
                 else:
                     pass  # img[j, i] = 0
     # m_rotation = cv2.getRotationMatrix2D(((cols - 1) / 2.0, (rows - 1) / 2.0), angle, 2)
