@@ -201,7 +201,7 @@ def distortion():
 
         def g2(x): return anti_slope * (x - sx1) + sy1
 
-    def parabola(x, dee): return (dee * math.sqrt(math.pow(ixs - sx, 2) + math.pow(iys - sy, 2))) / Radius *\
+    def parabola(x, dee): return (dee * math.sqrt(math.pow(ixs - sx, 2) + math.pow(iys - sy, 2))) / math.pow(Radius, 3) *\
                                  (((-math.pow(x, 2)) / math.pow(Radius, 2)) + 1)
     for j in range(img.shape[0]):
         for i in range(img.shape[1]):
