@@ -7,12 +7,26 @@ Radius = 30
 ixs, iys = -1, -1
 ixt, iyt = -1, -1
 start = True
-interpolation_picker = 2
+interpolation_picker = 1
 direction = 0
 
 
-def callback_button(x):
-    pass
+def callback_interpolation_near(x):
+    global interpolation_picker
+    if x == 1:
+        interpolation_picker = 1
+
+
+def callback_interpolation_bili(x):
+    global interpolation_picker
+    if x == 1:
+        interpolation_picker = 2;
+
+
+def callback_interpolation_cub(x):
+    global interpolation_picker
+    if x == 1:
+        interpolation_picker = 3
 
 
 def callback_radius(x):
@@ -57,12 +71,74 @@ def bilinear(i, j, m):
            + ((i - i0) * (j - j0)) * m[j1, i1]
 
 
+def make_equation(x, y, m):
+    eq = []
+    for i in range(4):
+        for j in range(4):
+            eq.append(math.pow(x, i) * math.pow(y, j))
+    return eq, m[x, y]
+
+
+def bicubic(i, j, m):
+    # need to find the x and y in the inverse function and according to their position we find the 4 nearest
+    x = 0
+    y = 0
+    b = []
+    a = []
+    # add to the image 2 rows 2 columns
+    new_m = np.zeros((m.shape[0] + 2, m.shape[1] + 2))
+    new_m[0, 0] = m[0, 0]
+    new_m[0, new_m.shape[1] - 1] = m[0, m.shape[1] - 1]
+    new_m[new_m.shape[0] - 1, 0] = m[m.shape[0] - 1, 0]
+    new_m[new_m.shape[0] - 1, new_m.shape[1] - 1] = m[m.shape[0] - 1, m.shape[1] - 1]
+    for j in range(new_m.shape[0]):
+        for i in range(new_m.shape[1]):
+            if j == 0:
+                if i == 0 or i == new_m.shape[1] - 1:
+                    pass
+                else:
+                    new_m[j, i] = m[j, i - 1]
+            elif i == 0:
+                if j == new_m.shape[0] - 1:
+                    pass
+                else:
+                    new_m[j, i] = m[j - 1, i]
+            elif j == new_m.shape[0] - 1:
+                if i == new_m.shape[1] - 1:
+                    pass
+                else:
+                    new_m[j, i] = m[j - 1, i - 1]
+            else:
+                new_m[j, i] = m[j - 1, i - 1]
+
+    x0 = np.floor(x).astype(int)
+    y0 = np.floor(y).astype(int)
+    x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15 = \
+        (x0, x0 - 1, x0 + 1, x0, x0, x0 - 1, x0 + 1, x0 - 1, x0 + 1, x0 - 1, x0 + 1, x0 + 2, x0 + 2, x0 + 2, x0 + 2)
+    y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15 = \
+        (y0 - 1, y0, y0, y0 + 1, y0 + 2, y0 - 1, y0 - 1, y0 + 1, y0 + 1, y0 + 2, y0 + 2, y0 + 2, y0 + 1, y0, y0 - 1)
+    xis = [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15]
+    yis = [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15]
+    for x, y in (xis, yis):
+        ai, bi = make_equation(x, y, m)
+        a.append(ai)
+        b.append(bi)
+    ais = np.linalg.solve(a, b)
+    part, _ = make_equation(x, y, m)
+    res = 0
+    for a, xi in (ais, part):
+        res = res + a * xi
+    return res
+
+
 def interpolation(i, j, m, t_inverse):
     global interpolation_picker
     if interpolation_picker == 1:
         return nearest_neighbor(i, j, m, t_inverse)
     elif interpolation_picker == 2:
         return bilinear(i, j, m)
+    elif interpolation_picker == 3:
+        return bicubic(i, j, m)
     else:
         raise Exception('non existing interpolation')
 
@@ -185,26 +261,33 @@ def distortion():
     ex2 = int(ex2)
     ey2 = int(ey2)
 
-    def f1(x): return slope * (x - ax1) + ay1
+    def f1(x):
+        return slope * (x - ax1) + ay1
 
-    def f2(x): return slope * (x - ax2) + ay2
+    def f2(x):
+        return slope * (x - ax2) + ay2
 
     def g3(x): return anti_slope * (x - ixs) + iys
 
     def g4(x): return anti_slope * (x - ixt) + iyt
     if ex1 > sx1:
 
-        def g1(x): return anti_slope * (x - sx1) + sy1
+        def g1(x):
+            return anti_slope * (x - sx1) + sy1
 
-        def g2(x): return anti_slope * (x - ex1) + ey1
+        def g2(x):
+            return anti_slope * (x - ex1) + ey1
     else:
 
-        def g1(x): return anti_slope * (x - ex1) + ey1
+        def g1(x):
+            return anti_slope * (x - ex1) + ey1
 
-        def g2(x): return anti_slope * (x - sx1) + sy1
+        def g2(x):
+            return anti_slope * (x - sx1) + sy1
 
-    def parabola(x, y): return (y * math.sqrt(math.pow(ixs - ixt, 2) + math.pow(iys - iyt, 2))) / Radius *\
-                               ((math.pow(Radius, 2) - math.pow(x, 2)) / math.pow(Radius, 2))
+    def parabola(x, y):
+        return (y * math.sqrt(math.pow(ixs - ixt, 2) + math.pow(iys - iyt, 2))) / Radius * \
+               ((math.pow(Radius, 2) - math.pow(x, 2)) / math.pow(Radius, 2))
 
     def parabola2(x, y, dis): return y / math.sqrt(math.pow(ixs - ex, 2) + math.pow(iys - ey, 2)) *\
                                 (Radius - (math.pow(x, 2) / Radius)) +\
@@ -225,7 +308,7 @@ def distortion():
     for j in range(img.shape[0]):
         for i in range(img.shape[1]):
             if f2(i) <= j <= f1(i) and ((g1(i) <= j <= g2(i) and (direction == 1 or direction == 3)) or
-                                      (g1(i) >= j >= g2(i) and (direction == 2 or direction == 4))):
+                                        (g1(i) >= j >= g2(i) and (direction == 2 or direction == 4))):
                 if (g3(i) >= j and (direction == 1 or direction == 4)) or \
                         (g3(i) <= j and (direction == 3 or direction == 2)):
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
@@ -239,13 +322,17 @@ def distortion():
                                                        math.pow(d_tag, 2)), d_tag)
                     # print(jump_distance)
                     if direction == 1:
-                        img[int(j + jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j + jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                     if direction == 2:
-                        img[int(j - jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j - jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                     if direction == 3:
-                        img[int(j - jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j - jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                     if direction == 4:
-                        img[int(j + jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j + jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                 else:
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
@@ -257,11 +344,14 @@ def distortion():
                     jump_distance = parabola2(math.sqrt(math.pow(d, 2) - math.pow(d_tag, 2)), d_tag,
                                               math.sqrt(math.pow(ixs - ixt, 2) + math.pow(iys - iyt, 2)) - d_tag)
                     if direction == 1:
-                        img[int(j + jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j + jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                     if direction == 2:
-                        img[int(j - jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j - jump_distance * math.sin(angle)), int(i + jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                     if direction == 3:
-                        img[int(j - jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = img_og[j, i]
+                        img[int(j - jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = \
+                            img_og[j, i]
                     if direction == 4:
                         img[int(j + jump_distance * math.sin(angle)), int(i - jump_distance * math.cos(angle))] = img_og[j, i]
 
@@ -343,6 +433,10 @@ img = cv2.imread('im.jpg', 0)
 rows, cols = img.shape
 cv2.namedWindow('image')
 cv2.createTrackbar('Radius', 'image', 30, 50, callback_radius)
+cv2.createTrackbar('nearest', 'image', 0, 1, callback_interpolation_near)
+cv2.createTrackbar('bilinear', 'image', 0, 1, callback_interpolation_bili)
+cv2.createTrackbar('cubic', 'image', 0, 1, callback_interpolation_cub)
+
 cv2.imshow('image', img)
 cv2.setMouseCallback('image', draw_circle)
 cv2.waitKey(0)
