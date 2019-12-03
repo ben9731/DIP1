@@ -279,6 +279,7 @@ def distortion():
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
                     d_tag = abs(d * math.cos(new_angle))
+                    # TODO
                 else:
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
@@ -287,6 +288,7 @@ def distortion():
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
                     d_tag = abs(d * math.cos(new_angle))
+                    # TODO
 
     # m_rotation = cv2.getRotationMatrix2D(((cols - 1) / 2.0, (rows - 1) / 2.0), angle, 2)
     # tmp_img = cv2.warpAffine(img, m_rotation, (cols, rows))
