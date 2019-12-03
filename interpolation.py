@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import math
-import copy
 
 Radius = 30
 ixs, iys = -1, -1
@@ -20,7 +19,7 @@ def callback_interpolation_near(x):
 def callback_interpolation_bili(x):
     global interpolation_picker
     if x == 1:
-        interpolation_picker = 2;
+        interpolation_picker = 2
 
 
 def callback_interpolation_cub(x):
@@ -102,14 +101,15 @@ def bicubic(x, y, m):
     return res
 
 
-def interpolation(i, j, m):
+def interpolation(x, y, m):
     global interpolation_picker
+    image_big = cv2.copyMakeBorder(m, 2, 2, 2, 2, cv2.BORDER_REPLICATE)
     if interpolation_picker == 1:
-        return nearest_neighbor(i, j, m)
+        return nearest_neighbor(x + 2, y + 2, image_big)
     elif interpolation_picker == 2:
-        return bilinear(i, j, m)
+        return bilinear(x + 2, y + 2, image_big)
     elif interpolation_picker == 3:
-        return bicubic(i, j, m)
+        return bicubic(x + 2, y + 2, image_big)
     else:
         raise Exception('non existing interpolation')
 
@@ -263,12 +263,12 @@ def distortion():
     def parabola2(x, y, dis): return y / math.sqrt(math.pow(ixs - ex, 2) + math.pow(iys - ey, 2)) *\
                                 (Radius - (math.pow(x, 2) / Radius)) +\
                                 math.sqrt(math.pow(ixs - ixt, 2) + math.pow(iys - iyt, 2)) *\
-                                (dis /\
+                                (dis /
                                  math.sqrt(math.pow(ixs - ex, 2) + math.pow(iyt - ey, 2)))
 
     def parabola_inverse(x, y): return y * Radius /\
                                        math.sqrt(math.pow(ixt - sx, 2) + math.pow(iyt - sy, 2)) -\
-                                        y * math.pow(x, 2) / (Radius *\
+                                        y * math.pow(x, 2) / (Radius *
                                         math.sqrt(math.pow(ixt - sx, 2) + math.pow(iyt - sy, 2)))
 
     def parabola2_inverse(x, y): return y * math.sqrt(math.pow(ixs - ex, 2) + math.pow(iys - ey, 2)) / Radius -\
@@ -344,7 +344,15 @@ def distortion():
                     if direction == 1:
                         img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy +
                                                   jump_distance * math.sin(angle), img_og)
-                    # TODO
+                    if direction == 2:
+                        img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy +
+                                                  jump_distance * math.sin(angle), img_og)
+                    if direction == 3:
+                        img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy -
+                                                  jump_distance * math.sin(angle), img_og)
+                    if direction == 4:
+                        img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy -
+                                                  jump_distance * math.sin(angle), img_og)
                 else:
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
@@ -357,7 +365,15 @@ def distortion():
                     if direction == 1:
                         img[j, i] = interpolation(ixs + jump_distance * math.cos(angle), iys +
                                                   jump_distance * math.sin(angle), img_og)
-                    # TODO
+                    if direction == 2:
+                        img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy +
+                                                  jump_distance * math.sin(angle), img_og)
+                    if direction == 3:
+                        img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy -
+                                                  jump_distance * math.sin(angle), img_og)
+                    if direction == 4:
+                        img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy -
+                                                  jump_distance * math.sin(angle), img_og)
 
     # m_rotation = cv2.getRotationMatrix2D(((cols - 1) / 2.0, (rows - 1) / 2.0), angle, 2)
     # tmp_img = cv2.warpAffine(img, m_rotation, (cols, rows))
