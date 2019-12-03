@@ -34,10 +34,9 @@ def callback_radius(x):
     Radius = x
 
 
-def nearest_neighbor(i, j, m, t_inverse):
+def nearest_neighbor(x, y, m):
     # return m[i, j]
     x_max, y_max = m.shape[0] - 1, m.shape[1] - 1
-    x, y, _ = np.squeeze(np.asarray(t_inverse)) @ np.array([i, j, 1])
     if np.floor(x) == x and np.floor(y) == y:
         x, y = int(x), int(y)
         return m[x, y]
@@ -79,62 +78,34 @@ def make_equation(x, y, m):
     return eq, m[x, y]
 
 
-def bicubic(i, j, m):
-    # need to find the x and y in the inverse function and according to their position we find the 4 nearest
-    x = 0
-    y = 0
+def bicubic(x, y, m):
     b = []
     a = []
-    # add to the image 2 rows 2 columns
-    new_m = np.zeros((m.shape[0] + 2, m.shape[1] + 2))
-    new_m[0, 0] = m[0, 0]
-    new_m[0, new_m.shape[1] - 1] = m[0, m.shape[1] - 1]
-    new_m[new_m.shape[0] - 1, 0] = m[m.shape[0] - 1, 0]
-    new_m[new_m.shape[0] - 1, new_m.shape[1] - 1] = m[m.shape[0] - 1, m.shape[1] - 1]
-    for j in range(new_m.shape[0]):
-        for i in range(new_m.shape[1]):
-            if j == 0:
-                if i == 0 or i == new_m.shape[1] - 1:
-                    pass
-                else:
-                    new_m[j, i] = m[j, i - 1]
-            elif i == 0:
-                if j == new_m.shape[0] - 1:
-                    pass
-                else:
-                    new_m[j, i] = m[j - 1, i]
-            elif j == new_m.shape[0] - 1:
-                if i == new_m.shape[1] - 1:
-                    pass
-                else:
-                    new_m[j, i] = m[j - 1, i - 1]
-            else:
-                new_m[j, i] = m[j - 1, i - 1]
-
     x0 = np.floor(x).astype(int)
     y0 = np.floor(y).astype(int)
     x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15 = \
         (x0, x0 - 1, x0 + 1, x0, x0, x0 - 1, x0 + 1, x0 - 1, x0 + 1, x0 - 1, x0 + 1, x0 + 2, x0 + 2, x0 + 2, x0 + 2)
     y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15 = \
         (y0 - 1, y0, y0, y0 + 1, y0 + 2, y0 - 1, y0 - 1, y0 + 1, y0 + 1, y0 + 2, y0 + 2, y0 + 2, y0 + 1, y0, y0 - 1)
-    xis = [x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15]
-    yis = [y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15]
-    for x, y in (xis, yis):
+    xis = [x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15]
+    yis = [y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, y10, y11, y12, y13, y14, y15]
+    for x, y in zip(xis, yis):
         ai, bi = make_equation(x, y, m)
         a.append(ai)
         b.append(bi)
+
     ais = np.linalg.solve(a, b)
     part, _ = make_equation(x, y, m)
     res = 0
-    for a, xi in (ais, part):
+    for a, xi in zip(ais, part):
         res = res + a * xi
     return res
 
 
-def interpolation(i, j, m, t_inverse):
+def interpolation(i, j, m):
     global interpolation_picker
     if interpolation_picker == 1:
-        return nearest_neighbor(i, j, m, t_inverse)
+        return nearest_neighbor(i, j, m)
     elif interpolation_picker == 2:
         return bilinear(i, j, m)
     elif interpolation_picker == 3:
@@ -362,6 +333,19 @@ def distortion():
                                       (g1(i) >= j >= g2(i) and (direction == 2 or direction == 4))):
                 if (g4(i) >= j and (direction == 1 or direction == 4)) or \
                         (g4(i) <= j and (direction == 3 or direction == 2)):
+                    d = math.sqrt(math.pow(sx - i, 2) + math.pow(sy - j, 2))
+                    try:
+                        new_angle = math.atan(((j - sy) / (i - sx)))
+                    except ZeroDivisionError:
+                        new_angle = 1.5708
+                    new_angle = abs(new_angle - angle)
+                    d_tag = abs(d * math.cos(new_angle))
+                    jump_distance = parabola_inverse(math.sqrt(math.pow(d, 2) - math.pow(d_tag, 2)), d_tag)
+                    if direction == 1:
+                        img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy +
+                                                  jump_distance * math.sin(angle), img_og)
+                    # TODO
+                else:
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
                         new_angle = math.atan(((j - iys) / (i - ixs)))
@@ -369,15 +353,10 @@ def distortion():
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
                     d_tag = abs(d * math.cos(new_angle))
-                    # TODO
-                else:
-                    d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
-                    try:
-                        new_angle = math.atan(((j - iyt) / (i - ixt)))
-                    except ZeroDivisionError:
-                        new_angle = 1.5708
-                    new_angle = abs(new_angle - angle)
-                    d_tag = abs(d * math.cos(new_angle))
+                    jump_distance = parabola2_inverse(math.sqrt(math.pow(d, 2) - math.pow(d_tag, 2)), d_tag)
+                    if direction == 1:
+                        img[j, i] = interpolation(ixs + jump_distance * math.cos(angle), iys +
+                                                  jump_distance * math.sin(angle), img_og)
                     # TODO
 
     # m_rotation = cv2.getRotationMatrix2D(((cols - 1) / 2.0, (rows - 1) / 2.0), angle, 2)
