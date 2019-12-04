@@ -355,21 +355,25 @@ def distortion():
                     d_tag = abs(d * math.cos(new_angle))
                     jump_distance = parabola_inverse(math.sqrt(math.pow(d, 2) - math.pow(d_tag, 2)), d_tag)
                     if direction == 1:
-                        if sx + jump_distance * math.cos(angle) > img.shape[1] - 1 or sy + jump_distance * math.sin(
-                                angle) > img.shape[0] - 1:
-                            pass
-                        else:
+                        if sx + jump_distance * math.cos(angle) < img.shape[1] and sy + jump_distance * math.sin(
+                                angle) < img.shape[0]:
                             img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy +
                                                       jump_distance * math.sin(angle), img_og)
                     if direction == 2:
-                        img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy +
-                                                  jump_distance * math.sin(angle), img_og)
+                        if sx - jump_distance * math.cos(angle) < img.shape[1] and sy + jump_distance * math.sin(
+                                angle) < img.shape[0]:
+                            img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy +
+                                                      jump_distance * math.sin(angle), img_og)
                     if direction == 3:
-                        img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy -
-                                                  jump_distance * math.sin(angle), img_og)
+                        if sx - jump_distance * math.cos(angle) < img.shape[1] and sy - jump_distance * math.sin(
+                                angle) < img.shape[0]:
+                            img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy -
+                                                      jump_distance * math.sin(angle), img_og)
                     if direction == 4:
-                        img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy -
-                                                  jump_distance * math.sin(angle), img_og)
+                        if sx + jump_distance * math.cos(angle) < img.shape[1] and sy - jump_distance * math.sin(
+                                angle) < img.shape[0]:
+                            img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy -
+                                                      jump_distance * math.sin(angle), img_og)
                 else:
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
