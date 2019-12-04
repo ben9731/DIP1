@@ -38,7 +38,7 @@ def nearest_neighbor(x, y, m):
     x_max, y_max = m.shape[0] - 1, m.shape[1] - 1
     if np.floor(x) == x and np.floor(y) == y:
         x, y = int(x), int(y)
-        return m[x, y]
+        return m[y, x]
     if np.abs(np.floor(x) - x) < np.abs(np.ceil(x) - x):
         x = int(np.floor(x))
     else:
@@ -124,18 +124,20 @@ def distortion():
     ey = -1
     sx1 = -1
     sy1 = -1
-    sx2 = -1
-    sy2 = -1
     ax1 = -1
     ay1 = -1
     ax2 = -1
     ay2 = -1
     ex1 = -1
     ey1 = -1
-    ex2 = -1
-    ey2 = -1
-    slope = (iyt - iys) / (ixt - ixs)
-    anti_slope = -(1 / slope)
+    try:
+        slope = (iyt - iys) / (ixt - ixs)
+    except ZeroDivisionError:
+        slope = float('inf')
+    try:
+        anti_slope = -(1 / slope)
+    except ZeroDivisionError:
+        anti_slope = float('inf')
     img_og = img.copy()
     angle = abs(math.atan(slope))
     anti_angle = abs(math.atan(anti_slope))
@@ -160,12 +162,8 @@ def distortion():
         ay2 = iys - (Radius * math.sin(anti_angle))
         sx1 = sx - (Radius * math.cos(anti_angle))
         sy1 = sy + (Radius * math.sin(anti_angle))
-        sx2 = sx + (Radius * math.cos(anti_angle))
-        sy2 = sy - (Radius * math.sin(anti_angle))
         ex1 = ex - (Radius * math.cos(anti_angle))
         ey1 = ey + (Radius * math.sin(anti_angle))
-        ex2 = ex + (Radius * math.cos(anti_angle))
-        ey2 = ey - (Radius * math.sin(anti_angle))
     elif direction == 2:
         sx = ixs - (Radius * math.cos(angle))
         sy = iys + (Radius * math.sin(angle))
@@ -177,12 +175,8 @@ def distortion():
         ay2 = iys - (Radius * math.sin(anti_angle))
         sx1 = sx + (Radius * math.cos(anti_angle))
         sy1 = sy + (Radius * math.sin(anti_angle))
-        sx2 = sx - (Radius * math.cos(anti_angle))
-        sy2 = sy - (Radius * math.sin(anti_angle))
         ex1 = ex + (Radius * math.cos(anti_angle))
         ey1 = ey + (Radius * math.sin(anti_angle))
-        ex2 = ex - (Radius * math.cos(anti_angle))
-        ey2 = ey - (Radius * math.sin(anti_angle))
     elif direction == 3:
         sx = ixs + (Radius * math.cos(angle))
         sy = iys + (Radius * math.sin(angle))
@@ -194,12 +188,8 @@ def distortion():
         ay2 = iys - (Radius * math.sin(anti_angle))
         sx1 = sx - (Radius * math.cos(anti_angle))
         sy1 = sy + (Radius * math.sin(anti_angle))
-        sx2 = sx + (Radius * math.cos(anti_angle))
-        sy2 = sy - (Radius * math.sin(anti_angle))
         ex1 = ex - (Radius * math.cos(anti_angle))
         ey1 = ey + (Radius * math.sin(anti_angle))
-        ex2 = ex + (Radius * math.cos(anti_angle))
-        ey2 = ey - (Radius * math.sin(anti_angle))
     elif direction == 4:
         sx = ixs + (Radius * math.cos(angle))
         sy = iys - (Radius * math.sin(angle))
@@ -211,28 +201,20 @@ def distortion():
         ay2 = iys - (Radius * math.sin(anti_angle))
         sx1 = sx + (Radius * math.cos(anti_angle))
         sy1 = sy + (Radius * math.sin(anti_angle))
-        sx2 = sx - (Radius * math.cos(anti_angle))
-        sy2 = sy - (Radius * math.sin(anti_angle))
         ex1 = ex + (Radius * math.cos(anti_angle))
         ey1 = ey + (Radius * math.sin(anti_angle))
-        ex2 = ex - (Radius * math.cos(anti_angle))
-        ey2 = ey - (Radius * math.sin(anti_angle))
     sx = int(sx)
     sy = int(sy)
     ex = int(ex)
     ey = int(ey)
     sx1 = int(sx1)
     sy1 = int(sy1)
-    sx2 = int(sx2)
-    sy2 = int(sy2)
     ax1 = int(ax1)
     ay1 = int(ay1)
     ax2 = int(ax2)
     ay2 = int(ay2)
     ex1 = int(ex1)
     ey1 = int(ey1)
-    ex2 = int(ex2)
-    ey2 = int(ey2)
 
     def f1(x):
         return slope * (x - ax1) + ay1
@@ -273,13 +255,13 @@ def distortion():
                 math.sqrt(math.pow(ixs - ex, 2) + math.pow(iyt - ey, 2)))
 
     def parabola_inverse(x, y):
-        return y * Radius / \
+        return - y * Radius / \
                math.sqrt(math.pow(ixt - sx, 2) + math.pow(iyt - sy, 2)) - \
                y * math.pow(x, 2) / (Radius *
                                      math.sqrt(math.pow(ixt - sx, 2) + math.pow(iyt - sy, 2)))
 
     def parabola2_inverse(x, y):
-        return y * math.sqrt(math.pow(ixs - ex, 2) + math.pow(iys - ey, 2)) / Radius - \
+        return - y * math.sqrt(math.pow(ixs - ex, 2) + math.pow(iys - ey, 2)) / Radius - \
                y * math.pow(x, 2) * math.sqrt(math.pow(ixs - ex, 2) + math.pow(iys - ey, 2)) / \
                math.pow(Radius, 3)
 
@@ -349,6 +331,8 @@ def distortion():
                     d = math.sqrt(math.pow(sx - i, 2) + math.pow(sy - j, 2))
                     try:
                         new_angle = math.atan(((j - sy) / (i - sx)))
+                        if direction == 2 or direction == 4:
+                            new_angle = - new_angle
                     except ZeroDivisionError:
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
@@ -357,27 +341,29 @@ def distortion():
                     if direction == 1:
                         if sx + jump_distance * math.cos(angle) < img.shape[1] and sy + jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy +
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(sx + jump_distance * math.cos(angle)), int(sy +
+                                                      jump_distance * math.sin(angle)), img_og)
                     if direction == 2:
                         if sx - jump_distance * math.cos(angle) < img.shape[1] and sy + jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy +
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(sx - jump_distance * math.cos(angle)), int(sy +
+                                                      jump_distance * math.sin(angle)), img_og)
                     if direction == 3:
                         if sx - jump_distance * math.cos(angle) < img.shape[1] and sy - jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy -
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(sx - jump_distance * math.cos(angle)), int(sy -
+                                                      jump_distance * math.sin(angle)), img_og)
                     if direction == 4:
                         if sx + jump_distance * math.cos(angle) < img.shape[1] and sy - jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy -
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(sx + jump_distance * math.cos(angle)), int(sy -
+                                                      jump_distance * math.sin(angle)), img_og)
                 else:
-                    d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
+                    d = math.sqrt(math.pow(ixt - i, 2) + math.pow(iyt - j, 2))
                     try:
-                        new_angle = math.atan(((j - iys) / (i - ixs)))
+                        new_angle = math.atan(((j - iyt) / (i - ixt)))
+                        if direction == 2 or direction == 4:
+                            new_angle = - new_angle
                     except ZeroDivisionError:
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
@@ -386,56 +372,23 @@ def distortion():
                     if direction == 1:
                         if ixs + jump_distance * math.cos(angle) < img.shape[1] and iys + jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(ixs + jump_distance * math.cos(angle), iys +
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(ixs + jump_distance * math.cos(angle)), int(iys +
+                                                      jump_distance * math.sin(angle)), img_og)
                     if direction == 2:
-                        if sx - jump_distance * math.cos(angle) < img.shape[1] and sy + jump_distance * math.sin(
+                        if ixs - jump_distance * math.cos(angle) < img.shape[1] and iys + jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy +
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(ixs - jump_distance * math.cos(angle)), int(iys +
+                                                      jump_distance * math.sin(angle)), img_og)
                     if direction == 3:
-                        if sx - jump_distance * math.cos(angle) < img.shape[1] and sy - jump_distance * math.sin(
+                        if ixs - jump_distance * math.cos(angle) < img.shape[1] and iys - jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx - jump_distance * math.cos(angle), sy -
-                                                      jump_distance * math.sin(angle), img_og)
+                            img[j, i] = interpolation(int(ixs - jump_distance * math.cos(angle)), int(iys -
+                                                      jump_distance * math.sin(angle)), img_og)
                     if direction == 4:
-                        if sx + jump_distance * math.cos(angle) < img.shape[1] and sy - jump_distance * math.sin(
+                        if ixs + jump_distance * math.cos(angle) < img.shape[1] and iys - jump_distance * math.sin(
                                 angle) < img.shape[0]:
-                            img[j, i] = interpolation(sx + jump_distance * math.cos(angle), sy -
-                                                      jump_distance * math.sin(angle), img_og)
-
-    # m_rotation = cv2.getRotationMatrix2D(((cols - 1) / 2.0, (rows - 1) / 2.0), angle, 2)
-    # tmp_img = cv2.warpAffine(img, m_rotation, (cols, rows))
-    # m_translation = np.float32([[1, 0, 5], [0, 1, 5]])
-    # tmp_img = cv2.warpAffine(tmp_img, m_translation, (cols, rows))
-    # print(ixs, iys, ixt, iyt, Radius)
-    # scale = 20
-    # print(angle)
-    # for i in range(iys - Radius, iys + Radius):
-    #     for j in range(ixs - Radius, ixs + Radius):
-    #         if math.sqrt(math.pow(ixs - j, 2) + math.pow(iys - i, 2)) <= Radius:
-    #             img[i, j] = tmp_img[i, j]
-    # for i in range(iyt - Radius, iyt + Radius):
-    #     for j in range(ixt - Radius, ixt + Radius):
-    #         if math.sqrt(math.pow(ixt - j, 2) + math.pow(iyt - i, 2)) <= Radius:
-    #             img[i, j] = tmp_img[i, j]
-    # a = np.squeeze(np.asarray(m_rotation))
-    # a = np.vstack([a, [0, 0, 1]])
-    # m_rotation = np.asmatrix(a)
-    # a = np.squeeze(np.asarray(m_translation))
-    # a = np.vstack([a, [0, 0, 1]])
-    # m_translation = np.asmatrix(a)
-    # print(m_rotation)
-    # for i in range(img.shape[0]):
-    #     for j in range(img.shape[1]):
-    #         if math.sqrt(math.pow(ixt - i, 2) + math.pow(iyt - j, 2)) <= Radius:
-    #             img[i, j] = interpolation(i, j, img_og, np.linalg.inv(m_rotation))
-    # for i in range(img.shape[0]):
-    #     for j in range(img.shape[1]):
-    #         if math.sqrt(math.pow(ixt - i, 2) + math.pow(iyt - j, 2)) <= Radius:
-    #             img[i, j] = interpolation(i, j, img_og, np.linalg.inv(m_translation))
-    # cv2.imshow('image', img)
-    # cv2.waitKey(0)
+                            img[j, i] = interpolation(int(ixs + jump_distance * math.cos(angle)), int(iys -
+                                                      jump_distance * math.sin(angle)), img_og)
 
 
 # mouse callback function
