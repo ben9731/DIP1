@@ -51,7 +51,7 @@ def nearest_neighbor(x, y, m):
         x = x_max
     if y > y_max:
         y = y_max
-    return m[x, y]
+    return m[y, x]
 
 
 def bilinear(i, j, m):
@@ -74,7 +74,7 @@ def make_equation(x, y, m):
     for i in range(4):
         for j in range(4):
             eq.append(math.pow(x, i) * math.pow(y, j))
-    return eq, m[x, y]
+    return eq, m[y, x]
 
 
 def bicubic(x, y, m):
@@ -285,6 +285,8 @@ def distortion():
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
                         new_angle = math.atan(((j - iys) / (i - ixs)))
+                        if direction == 2 or direction == 4:
+                            new_angle = - new_angle
                     except ZeroDivisionError:
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
@@ -308,6 +310,8 @@ def distortion():
                     d = math.sqrt(math.pow(ixs - i, 2) + math.pow(iys - j, 2))
                     try:
                         new_angle = math.atan(((j - iys) / (i - ixs)))
+                        if direction == 2 or direction == 4:
+                            new_angle = - new_angle
                     except ZeroDivisionError:
                         new_angle = 1.5708
                     new_angle = abs(new_angle - angle)
